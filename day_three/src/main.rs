@@ -1,85 +1,68 @@
-fn get_averaged_decimal(input: &Vec<f32>, length: f32, rounding: f32) -> isize {
-    return isize::from_str_radix(
-        input
+fn part_one() -> u32 {
+    isize::from_str_radix(
+        include_str!("input.txt")
+            .lines()
+            .collect::<Vec<&str>>()
             .iter()
-            .map(|&s| {
-                (rounding - (s / length))
-                    .round()
-                    .to_string()
-                    .replace('-', "") // signed to unsigned, lol
+            .fold(Vec::new(), |mut sol, b| {
+                let j: Vec<char> = b.chars().collect();
+                for p in 0..j.len() {
+                    let c = j[p].to_digit(10).unwrap();
+                    if sol.get(p) == None {
+                        sol.push((0, 0));
+                    }
+                    if c == 1 {
+                        sol[p] = (sol[p].0 + 1, sol[p].1);
+                    } else {
+                        sol[p] = (sol[p].0, sol[p].1 + 1);
+                    }
+                }
+                sol
             })
-            .collect::<Vec<String>>()
+            .iter()
+            .map(|s| if s.1 > s.0 { "1" } else { "0" })
+            .collect::<Vec<&str>>()
             .join("")
             .as_str(),
         2,
     )
-    .unwrap();
+    .unwrap() as u32
 }
 
-fn filter_columns(input: &Vec<&str>, index: usize, flip: bool) -> isize {
-    if input.len() == 1 {
-        return isize::from_str_radix(input[0], 2).unwrap();
-    }
-
-    let mut filter = (input.iter().fold(0.0, |mut acc, byte| {
-        let bits: Vec<f32> = byte
-            .chars()
-            .map(|c| c.to_digit(10).unwrap() as f32)
-            .collect();
-        acc += bits[index];
-        acc
-    }) / input.len() as f32)
-        .round();
-    if flip {
-        filter = if filter == 1.0 { 0.0 } else { 1.0 };
-    }
-
-    filter_columns(
-        &input
-            .iter()
-            .filter(|j| {
-                let p: Vec<char> = j.chars().collect();
-                p.get(index).unwrap().to_digit(10).unwrap() as f32 == filter
-            })
-            .cloned()
-            .collect(),
-        index + 1,
-        flip,
-    )
-}
-
-fn part_one() -> isize {
-    let input: Vec<&str> = include_str!("input.txt").lines().collect();
-    let averages: Vec<f32> = input.iter().fold(Vec::new(), |mut acc, byte| {
-        let bits: Vec<f32> = byte
-            .chars()
-            .map(|c| c.to_digit(10).unwrap() as f32)
-            .collect();
-        for i in 0..bits.len() {
-            if acc.get(i) == None {
-                acc.push(bits[i])
+fn part_two(mut list: Vec<&str>, flip: bool) -> isize {
+    let mut i: usize = 0;
+    while list.len() > 1 {
+        let sol = list.iter().fold((0, 0), |mut a, b| {
+            if b.chars().collect::<Vec<char>>()[i].to_digit(10).unwrap() == 1 {
+                a.0 += 1
             } else {
-                acc[i] += bits[i];
+                a.1 += 1
             }
+            a
+        });
+        if list.len() > 1 {
+            list = list
+                .iter()
+                .filter(|s| {
+                    s.chars().collect::<Vec<char>>()[i].to_digit(10).unwrap()
+                        == if (sol.0 >= sol.1) == flip { 1 } else { 0 }
+                })
+                .cloned()
+                .collect();
         }
+        i += 1;
+    }
 
-        acc
-    });
-
-    let gamma = get_averaged_decimal(&averages, input.len() as f32, 0.0);
-    let epsilon = get_averaged_decimal(&averages, input.len() as f32, 1.0);
-
-    gamma * epsilon
-}
-
-fn part_two() -> isize {
-    let input: Vec<&str> = include_str!("input.txt").lines().collect();
-    let oxygen = filter_columns(&input, 0, false);
-    let co_two = filter_columns(&input, 0, true);
-    oxygen * co_two
+    isize::from_str_radix(list[0], 2).unwrap()
 }
 
 fn main() {
-    println!("part one: {}", part_one());
-    println!("part two: {}", part_two());
+    let input = part_one();
+    println!("part one: {}", (0b111111111111 ^ input) * input);
+
+    let input = include_str!("input.txt").lines().collect::<Vec<&str>>();
+    println!(
+        "part two: {}",
+        part_two(input.clone(), true) * part_two(input, false)
+    );
 }
