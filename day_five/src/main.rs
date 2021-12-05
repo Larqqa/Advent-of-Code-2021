@@ -81,15 +81,48 @@ fn get_input() -> Vec<Line> {
 
 use image::RgbImage;
 fn output_as_image(map: Vec<Vec<u32>>, width: u32, height: u32) -> Result<(), image::ImageError> {
+    let gen_fac = *map
+        .iter()
+        .flatten()
+        .reduce(|a, b| if a > b { a } else { b })
+        .unwrap() as f32;
+
     let img_buffer: Vec<u8> = map
         .iter()
         .flatten()
-        .map(|i| if i != &0 { [255, 255, 255] } else { [0, 0, 0] })
+        .map(|i| {
+            // Heatmap algo go brrrr...
+            let a_fac = gen_fac * 0.66;
+            let red = if *i > a_fac as u32 {
+                255.0 * (*i as f32 / 6.0)
+            } else {
+                0.0
+            };
+
+            let g_fac = gen_fac * 0.33;
+            let green = if *i > g_fac as u32 && *i < (a_fac + 2.0) as u32 {
+                255.0 * (*i as f32 / (a_fac + 2.0))
+            } else {
+                0.0
+            };
+
+            let blue = if *i >= 1 && *i < (g_fac + 2.0) as u32 {
+                255.0 * (*i as f32 / (g_fac + 2.0))
+            } else {
+                0.0
+            };
+
+            if i != &0 {
+                [red as u8, green as u8, blue as u8]
+            } else {
+                [0, 0, 0]
+            }
+        })
         .flatten()
         .collect();
 
     let img = RgbImage::from_raw(width, height, img_buffer)
-        .expect("container should have the right size for the image dimensions");
+        .expect("Width and height should match the buffer");
     img.save("out.png")?;
     Ok(())
 }
