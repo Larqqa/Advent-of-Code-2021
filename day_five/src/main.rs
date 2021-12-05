@@ -1,54 +1,57 @@
 #[derive(Debug)]
+struct Point {
+    x: i32,
+    y: i32,
+}
+
+#[derive(Debug)]
 struct Line {
-    x1: usize,
-    y1: usize,
-    x2: usize,
-    y2: usize,
+    point_a: Point,
+    point_b: Point,
 }
 
 impl Line {
-    fn map_vh(&self, mut map: Vec<Vec<u32>>) -> Vec<Vec<u32>> {
-        if self.x1 != self.x2 && self.y1 != self.y2 {
-            return map;
-        }
-        let (minx, maxx) = if self.x1 > self.x2 {
-            (self.x2, self.x1 + 1)
-        } else {
-            (self.x1, self.x2 + 1)
-        };
-        let (miny, maxy) = if self.y1 > self.y2 {
-            (self.y2, self.y1 + 1)
-        } else {
-            (self.y1, self.y2 + 1)
-        };
+    fn is_diagonal(&self) -> bool {
+        self.point_a.x != self.point_b.x && self.point_a.y != self.point_b.y
+    }
 
-        for x in minx..maxx {
-            for y in miny..maxy {
-                map[y][x] += 1;
+    fn map_vh(&self, mut map: Vec<Vec<u32>>) -> Vec<Vec<u32>> {
+        if !self.is_diagonal() {
+            let (min_x, max_x) = if self.point_a.x < self.point_b.x {
+                (self.point_a.x, self.point_b.x + 1)
+            } else {
+                (self.point_b.x, self.point_a.x + 1)
+            };
+            let (min_y, max_y) = if self.point_a.y < self.point_b.y {
+                (self.point_a.y, self.point_b.y + 1)
+            } else {
+                (self.point_b.y, self.point_a.y + 1)
+            };
+
+            for x in min_x..max_x {
+                for y in min_y..max_y {
+                    map[y as usize][x as usize] += 1;
+                }
             }
         }
         map
     }
 
     fn map_dg(&self, mut map: Vec<Vec<u32>>) -> Vec<Vec<u32>> {
-        if self.x1 != self.x2 && self.y1 != self.y2 {
-            let (fx, fy, lx, ly) = if self.x1 < self.x2 {
-                (self.x1, self.y1, self.x2, self.y2)
+        if self.is_diagonal() {
+            let (mut x, mut y, point_b) = if self.point_a.x < self.point_b.x {
+                (self.point_a.x, self.point_a.y, &self.point_b)
             } else {
-                (self.x2, self.y2, self.x1, self.y1)
+                (self.point_b.x, self.point_b.y, &self.point_a)
             };
-            let slope = (ly as i32 - fy as i32) / (lx as i32 - fx as i32);
 
-            let mut x = fx as i32;
-            let mut y = fy as i32;
+            let slope = (point_b.y - y) / (point_b.x - x);
 
-            while x <= lx as i32 && (y <= ly as i32 || y > ly as i32) {
+            while x <= point_b.x && (y <= point_b.y || y > point_b.y) {
                 map[y as usize][x as usize] += 1;
                 x += 1;
                 y += slope;
             }
-
-            return map;
         }
         map
     }
@@ -57,53 +60,61 @@ impl Line {
 fn get_input() -> Vec<Line> {
     return include_str!("input.txt")
         .lines()
-        .map(|s| {
-            let y: Vec<Vec<usize>> = s
+        .map(|l| {
+            let y: Vec<Vec<i32>> = l
                 .split(" -> ")
-                .map(|s| s.split(",").map(|i| i.parse().unwrap()).collect())
+                .map(|c| c.split(",").map(|n| n.parse().unwrap()).collect())
                 .collect();
             Line {
-                x1: y[0][0],
-                y1: y[0][1],
-                x2: y[1][0],
-                y2: y[1][1],
+                point_a: Point {
+                    x: y[0][0],
+                    y: y[0][1],
+                },
+                point_b: Point {
+                    x: y[1][0],
+                    y: y[1][1],
+                },
             }
         })
         .collect();
 }
 
-fn part_one() -> usize {
-    let input = get_input();
+use image::RgbImage;
+fn output_as_image(map: Vec<Vec<u32>>, width: u32, height: u32) -> Result<(), image::ImageError> {
+    let img_buffer: Vec<u8> = map
+        .iter()
+        .flatten()
+        .map(|i| if i != &0 { [255, 255, 255] } else { [0, 0, 0] })
+        .flatten()
+        .collect();
 
-    let mut map = vec![vec![0; 1000]; 1000];
-    for line in input {
-        map = line.map_vh(map);
-    }
-
-    let m: Vec<&u32> = map.iter().flatten().collect();
-
-    let sum = m.iter().filter(|b| b >= &&&2).count();
-
-    sum
-}
-
-fn part_two() -> usize {
-    let input = get_input();
-
-    let mut map = vec![vec![0; 1000]; 1000];
-    for line in input {
-        map = line.map_vh(map);
-        map = line.map_dg(map);
-    }
-
-    let m: Vec<&u32> = map.iter().flatten().collect();
-
-    let sum = m.iter().filter(|b| b >= &&&2).count();
-
-    sum
+    let img = RgbImage::from_raw(width, height, img_buffer)
+        .expect("container should have the right size for the image dimensions");
+    img.save("out.png")?;
+    Ok(())
 }
 
 fn main() {
-    println!("part one: {}", part_one());
-    println!("part two: {}", part_two());
+    let input = get_input();
+    let mut map = vec![vec![0; 1000]; 1000];
+
+    for line in &input {
+        map = line.map_vh(map);
+    }
+
+    println!(
+        "part one: {}",
+        map.iter().flatten().filter(|b| b >= &&&2).count()
+    );
+
+    for line in input {
+        map = line.map_dg(map);
+    }
+
+    println!(
+        "part two: {}",
+        map.iter().flatten().filter(|b| b >= &&&2).count()
+    );
+
+    output_as_image(map, 1000, 1000).expect("Problem creating the image");
 }
