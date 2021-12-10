@@ -21,39 +21,34 @@ fn find_bottoms(input: &Vec<i32>, width: i32) -> Vec<usize> {
         let bottom = n + width;
         let right = n + 1;
         let left = n - 1;
-
-        let mut offset = 4;
-        let mut count = 0;
+        let mut adjacent = 0;
+        let mut hits = 0;
         if top > 0 {
             if input[top as usize] > input[n as usize] {
-                count += 1;
+                hits += 1;
             }
-        } else {
-            offset -= 1
+            adjacent += 1
         }
         if bottom < input.len() as i32 {
             if input[bottom as usize] > input[n as usize] {
-                count += 1;
+                hits += 1;
             }
-        } else {
-            offset -= 1
+            adjacent += 1
         }
         if right < input.len() as i32 {
             if input[right as usize] > input[n as usize] {
-                count += 1;
+                hits += 1;
             }
-        } else {
-            offset -= 1
+            adjacent += 1
         }
         if left > 0 as i32 {
             if input[left as usize] > input[n as usize] {
-                count += 1;
+                hits += 1;
             }
-        } else {
-            offset -= 1
+            adjacent += 1
         }
 
-        if count == offset {
+        if hits == adjacent {
             output.push(n as usize);
         }
     }
@@ -68,30 +63,30 @@ fn find_lake_size(start: i32, width: i32, input: &Vec<i32>, map: &mut Vec<bool>)
     let bottom = start + width;
     let right = start + 1;
     let left = start - 1;
-    let mut sum = 1;
+    let mut visited = 1;
 
     if top >= 0 {
         if input[top as usize] != 9 && map[top as usize] != true {
-            sum += find_lake_size(top, width, &input, map);
+            visited += find_lake_size(top, width, &input, map);
         }
     }
     if bottom < input.len() as i32 {
         if input[bottom as usize] != 9 && map[bottom as usize] != true {
-            sum += find_lake_size(bottom, width, input, map);
+            visited += find_lake_size(bottom, width, input, map);
         }
     }
     if x < width - 1 && right < input.len() as i32 {
         if input[right as usize] != 9 && map[right as usize] != true {
-            sum += find_lake_size(right, width, input, map);
+            visited += find_lake_size(right, width, input, map);
         }
     }
     if x > 0 && left >= 0 {
         if input[left as usize] != 9 && map[left as usize] != true {
-            sum += find_lake_size(left, width, input, map);
+            visited += find_lake_size(left, width, input, map);
         }
     }
 
-    sum
+    visited
 }
 
 use image::RgbImage;
