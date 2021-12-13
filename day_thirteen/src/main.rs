@@ -1,45 +1,55 @@
 #[derive(Debug)]
 struct Coord {
-    x: u32,
-    y: u32,
+    x: usize,
+    y: usize,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 struct Fold {
     direction: String,
-    position: u32,
+    position: usize,
 }
 
 fn get_input() -> (Vec<Coord>, Vec<Fold>) {
     let input: Vec<&str> = include_str!("input.txt").split("\n\n").collect();
 
-    (
-        input[0]
-            .lines()
-            .map(|s| {
-                let n: Vec<&str> = s.split(",").collect();
-                Coord {
-                    x: n[0].parse().unwrap(),
-                    y: n[1].parse().unwrap(),
-                }
-            })
-            .collect(),
-        input[1]
-            .lines()
-            .map(|s| {
-                let n: Vec<&str> = s.split("g ").collect::<Vec<&str>>()[1].split("=").collect();
-                Fold {
-                    direction: String::from(n[0]),
-                    position: n[1].parse().unwrap(),
-                }
-            })
-            .collect(),
-    )
+    let coords = input[0]
+        .lines()
+        .map(|s| {
+            let n: Vec<&str> = s.split(",").collect();
+            Coord {
+                x: n[0].parse().unwrap(),
+                y: n[1].parse().unwrap(),
+            }
+        })
+        .collect();
+
+    let folds = input[1]
+        .lines()
+        .map(|s| {
+            let n: Vec<&str> = s.split("g ").collect::<Vec<&str>>()[1].split("=").collect();
+            Fold {
+                direction: String::from(n[0]),
+                position: n[1].parse().unwrap(),
+            }
+        })
+        .collect();
+
+    (coords, folds)
 }
 
-fn print_grid(paper: &Vec<char>, width: u32) {
+fn print_grid(paper: &Vec<char>, width: usize, print_readable: bool) {
     for i in 0..paper.len() {
-        print!("{}", paper[i]);
+        if print_readable {
+            if paper[i] == '·' {
+                print!(" ");
+            } else {
+                print!("█");
+            }
+        } else {
+            print!("{}", paper[i]);
+        }
+
         if i != 0 && i % (width) as usize == (width - 1) as usize {
             println!("");
         }
@@ -47,113 +57,112 @@ fn print_grid(paper: &Vec<char>, width: u32) {
     print!("\n");
 }
 
-fn fold_y(paper: &Vec<char>, width: u32, height: u32, position: u32) -> Vec<char> {
+fn fold_y(paper: &Vec<char>, width: usize, height: usize, position: usize) -> Vec<char> {
     let top_len = width * position;
     let bottom_len = width * (height - position);
-    println!("t {:?}, b {:?}", top_len, bottom_len);
 
-    let mut top = paper[..top_len as usize].to_owned();
+    // Split grid
+    let mut top = paper[..top_len].to_owned();
+    let bottom = paper[bottom_len..].to_owned();
 
-    let temp = paper[bottom_len as usize..].to_owned();
-    let mut bottom = temp.clone();
-    for i in 0..temp.len() {
-        let w = width as usize;
-        let h = position as usize;
-        let x = i % w;
-        let y = (h - (i / w)) - 1;
-        bottom[x + w * y] = temp[i];
-    }
+    // Fold bottom to top
+    for i in 0..bottom.len() {
+        let x = i % width;
+        let y = (position - (i / width)) - 1;
 
-    for i in 0..top.len() {
         if bottom[i] == '•' {
-            top[i] = bottom[i];
+            top[x + width * y] = bottom[i];
         }
     }
 
     top
 }
 
-fn fold_x(paper: &Vec<char>, width: u32, position: u32) -> Vec<char> {
+fn fold_x(paper: &Vec<char>, width: usize, position: usize) -> Vec<char> {
     let mut left: Vec<char> = Vec::new();
     let mut right: Vec<char> = Vec::new();
 
+    // Split grid
     for i in 0..paper.len() {
-        let x = i % width as usize;
+        let x = i % width;
 
-        if x < position as usize {
+        if x < position {
             left.push(paper[i]);
-        } else if x > position as usize {
+        } else if x > position {
             right.push(paper[i]);
         }
     }
 
-    let mut temp = right.clone();
+    // Fold right to left
     for i in 0..right.len() {
-        let w = position as usize;
-        let x = (w - (i % w)) - 1;
-        let y = i / w;
-        temp[x + w * y] = right[i];
-    }
+        let x = (position - (i % position)) - 1;
+        let y = i / position;
 
-    for i in 0..left.len() {
-        if temp[i] == '•' {
-            left[i] = temp[i];
+        if right[i] == '•' {
+            left[x + position * y] = right[i];
         }
     }
 
     left
 }
 
-fn count_dots(paper: &Vec<char>) -> u32 {
-    paper
-        .iter()
-        .fold(0, |a, b| if *b == '•' { a + 1 } else { a })
-}
-
-fn part_one() -> u32 {
-    let (coords, folds) = get_input();
-
-    let width = coords
+fn get_size(input: &Vec<Coord>) -> (usize, usize) {
+    let width = input
         .iter()
         .reduce(|a, b| if a.x > b.x { a } else { b })
         .unwrap()
         .x
         + 1;
 
-    let height = coords
+    let height = input
         .iter()
         .reduce(|a, b| if a.y > b.y { a } else { b })
         .unwrap()
         .y
         + 1;
 
-    println!("width {:?}, height {:?}", width, height);
+    (width, height)
+}
 
-    let mut paper = vec!['·'; (width * height) as usize];
-
-    for c in coords {
-        let i = c.x + width * c.y;
-        paper[i as usize] = '•';
+fn part_one(mut paper_copy: Vec<char>, first_fold: &Fold, width: usize) -> u32 {
+    match first_fold.direction.as_str() {
+        "x" => paper_copy = fold_x(&paper_copy, width, first_fold.position),
+        "y" => paper_copy = fold_x(&paper_copy, width, first_fold.position),
+        _ => (),
     }
 
-    let mut temp = paper.clone();
-    let mut w = width;
-    let mut h = height;
-    for i in 0..folds.len() {
-        let fold = folds[i].clone();
-        if fold.direction == "x" {
-            temp = fold_x(&temp, w, fold.position);
-            w = fold.position;
-        } else {
-            temp = fold_y(&temp, w, h, fold.position);
-            h = fold.position;
-        }
-    }
-
-    print_grid(&temp, w);
-    count_dots(&temp)
+    paper_copy
+        .iter()
+        .fold(0, |a, b| if *b == '•' { a + 1 } else { a })
 }
 
 fn main() {
-    println!("part one: {}", part_one());
+    let (coords, folds) = get_input();
+    let (mut width, mut height) = get_size(&coords);
+
+    // Generate paper
+    let mut paper = vec!['·'; width * height];
+    for coord in coords {
+        paper[coord.x + width * coord.y] = '•';
+    }
+
+    println!("part one: {}", part_one(paper.clone(), &folds[0], width));
+
+    for fold in folds {
+        match fold.direction.as_str() {
+            "x" => {
+                paper = fold_x(&paper, width, fold.position);
+                width = fold.position;
+            }
+            "y" => {
+                paper = fold_y(&paper, width, height, fold.position);
+                height = fold.position;
+            }
+            _ => (),
+        }
+    }
+
+    println!("part two:");
+    print_grid(&paper, width, false);
+    print_grid(&paper, width, true);
 }
