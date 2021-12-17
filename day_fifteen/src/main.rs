@@ -12,129 +12,78 @@ fn get_input() -> (Vec<i32>, usize, usize) {
     (grid, width, height)
 }
 
-fn min_distance(dist: &Vec<i32>, spt_set: &Vec<bool>, v: usize) -> usize {
-    let mut min = i32::MAX;
-    let mut min_index = 0;
-
-    for j in 0..v {
-        if spt_set[j] == false && dist[j] <= min {
-            min = dist[j];
-            min_index = j;
-        }
-    }
-
-    min_index
-}
-
-fn dijkstra(
-    matrix: Vec<HashMap<usize, i32>>,
-    src: usize,
-    v: usize,
-    width: usize,
-) -> (Vec<i32>, Vec<i32>) {
+use std::collections::HashMap;
+fn dijkstra(grid: Vec<i32>, src: usize, v: usize, width: usize) -> (HashMap<usize, i32>, Vec<i32>) {
     let mut spt_set = vec![false; v];
-    let mut dist = vec![i32::MAX; v];
+    let mut dist: HashMap<usize, i32> = HashMap::new();
+    let mut non_visited: HashMap<usize, i32> = HashMap::new();
     let mut shortest = vec![i32::MAX; v];
 
     shortest[src] = 0;
-    dist[src] = 0;
-    let len = dist.len();
+    dist.insert(0, 0);
+    non_visited.insert(0, 0);
+    let len = grid.len();
 
     for i in 0..v - 1 {
-        // let u = min_distance(&dist, &spt_set, v);
+        // if dist.len() % 1000 == 0 {
+        //     println!("{}", dist.len());
+        // }
 
-        let top = i as i32 - width as i32;
-        let bottom = i + width;
-        let left = i as i32 - 1;
-        let right = i + 1;
-        let mut min = i32::MAX;
-        let mut min_index = 0;
+        // Get minimum distance
+        let key = non_visited
+            .iter()
+            .min_by_key(|entry| {
+                if spt_set[*entry.0] {
+                    &i32::MAX
+                } else {
+                    entry.1
+                }
+            })
+            .unwrap();
+        let u = *key.0;
 
-        if top >= 0 && spt_set[top as usize] == false && min > dist[top as usize] {
-            min_index = top;
+        let top = u as i32 - width as i32;
+        let bottom = u + width;
+        let left = u as i32 - 1;
+        let right = u + 1;
+        let mut adjacency: Vec<usize> = Vec::new();
+
+        if top >= 0 {
+            adjacency.push(top as usize);
         }
-        if bottom < len && spt_set[bottom as usize] == false && min > dist[bottom as usize] {
-            min_index = bottom as i32;
+        if bottom < len {
+            adjacency.push(bottom);
         }
-        if left >= 0
-            && (left as usize) % width < (width - 1)
-            && spt_set[left as usize] == false
-            && min > dist[left as usize]
-        {
-            min_index = left;
+        if left >= 0 && (left as usize) % width < (width - 1) {
+            adjacency.push(left as usize);
         }
-        if (right % width) > 0
-            && right <= len
-            && spt_set[right as usize] == false
-            && min > dist[right as usize]
-        {
-            min_index = right as i32;
+        if (right % width) > 0 && right <= len {
+            adjacency.push(right);
         }
 
-        // println!("{}", i);
-
-        let u = min_index as usize;
         spt_set[u] = true;
+        non_visited.remove(&u);
 
-        // Eliminate this loop!!!
-        for j in 0..v {
-            if !spt_set[j]
-                && matrix[u].contains_key(&j)
-                && dist[u] != i32::MAX
-                && dist[u] + matrix[u].get(&j).unwrap() < dist[j]
-            {
-                shortest[j] = u as i32;
-                dist[j] = dist[u] + matrix[u].get(&j).unwrap();
+        // println!("{}", u);
+
+        for j in adjacency {
+            if !spt_set[j] && dist.contains_key(&u) {
+                let k = if dist.contains_key(&j) {
+                    *dist.get(&j).unwrap()
+                } else {
+                    i32::MAX
+                };
+                if dist.get(&u).unwrap() + grid[j] < k {
+                    shortest[j] = u as i32;
+                    let min = *dist.get(&u).unwrap() + grid[j];
+                    non_visited.insert(j, min);
+                    dist.insert(j, min);
+                }
             }
         }
     }
 
     (dist, shortest)
-}
-
-use std::collections::HashMap;
-fn gen_matrix(grid: Vec<i32>, width: usize) -> Vec<HashMap<usize, i32>> {
-    let mut m: Vec<HashMap<usize, i32>> = Vec::new();
-    let len = grid.len();
-
-    for i in 0..grid.len() {
-        let top = i as i32 - width as i32;
-        let bottom = i + width;
-        let left = i as i32 - 1;
-        let right = i + 1;
-
-        // let mut adjacency: Vec<i32> = vec![0; grid.len()];
-        let mut adjacency: HashMap<usize, i32> = HashMap::new();
-
-        if top >= 0 {
-            adjacency.insert(top as usize, grid[top as usize]);
-        }
-        if bottom < len {
-            adjacency.insert(bottom, grid[bottom]);
-        }
-        if left >= 0 && (left as usize) % width < (width - 1) {
-            adjacency.insert(left as usize, grid[left as usize]);
-        }
-        if (right % width) > 0 && right <= len {
-            adjacency.insert(right, grid[right]);
-        }
-
-        m.push(adjacency);
-    }
-
-    m
-}
-
-fn print_grid(grid: &Vec<i32>, width: &usize) {
-    print!("\n");
-    for i in 0..grid.len() {
-        print!("{}", grid[i]);
-
-        if i != 0 && i % width == (width - 1) {
-            print!("\n");
-        }
-    }
-    print!("\n");
 }
 
 fn stretch_grid(grid: Vec<i32>, width: usize) -> (Vec<i32>, usize) {
@@ -189,79 +138,35 @@ fn stretch_grid(grid: Vec<i32>, width: usize) -> (Vec<i32>, usize) {
         i += w * width;
     }
 
-    // print_grid(&g, &w);
     (g, w)
 }
 
 fn main() {
     let (grid, width, _) = get_input();
-    // println!("w {}, h {}", width, height);
-    // print_grid(&grid, &width);
-    let (g, w) = stretch_grid(grid, width);
-    let m = gen_matrix(g, w);
 
+    let (g, w) = stretch_grid(grid.clone(), width);
     println!("--dijkstra--");
-    let len = m.len();
-    let (d, _) = dijkstra(m, 0, len, w);
-    println!("part two: {}", d[len - 1]);
+    let len = g.len();
+    let (d, mut s) = dijkstra(g, 0, len, w);
+    println!("part two: {:#?}", d.get(&(len - 1)));
 
-    // println!("--grid--");
-    // println!("{:?}", grid);
+    let mut i = s.len() - 1;
+    while i > 0 {
+        // println!("{}", i);
+        let j = s[i] as usize;
+        s[i] = 0;
+        i = j;
+    }
 
-    // println!("--matrix--");
-    // let m = gen_matrix(grid, width);
-    // // for i in &m {
-    // //     println!("{:?}", i);
-    // // }
+    for i in 0..s.len() {
+        if s[i] == 0 {
+            print!("#");
+        } else {
+            print!("•");
+        }
 
-    // println!("--dijkstra--");
-    // let len = m.len();
-    // let (d, mut s) = dijkstra(m, 0, len);
-    // println!("part one: {}", d[len - 1]);
-
-    // for i in 0..d.len() {
-    //     if d[i] < 10 {
-    //         print!(" {} ", d[i]);
-    //     } else {
-    //         print!("{} ", d[i]);
-    //     }
-
-    //     if i != 0 && i % width == (width - 1) {
-    //         print!("\n");
-    //     }
-    // }
-    // print!("\n");
-
-    // for i in 0..s.len() {
-    //     if s[i] < 10 {
-    //         print!(" {} ", s[i]);
-    //     } else {
-    //         print!("{} ", s[i]);
-    //     }
-
-    //     if i != 0 && i % width == (width - 1) {
-    //         print!("\n");
-    //     }
-    // }
-    // print!("\n");
-
-    // let mut i = s.len() - 1;
-    // while i > 0 {
-    //     // println!("{}", i);
-    //     let j = s[i] as usize;
-    //     s[i] = 0;
-    //     i = j;
-    // }
-
-    // for i in 0..s.len() {
-    //     if s[i] < 10 {
-    //         print!(" {} ", s[i]);
-    //     } else {
-    //         print!("{} ", s[i]);
-    //     }
-
-    //     if i != 0 && i % width == (width - 1) {
-    //         print!("\n");
-    //     }
-    // }
+        if i != 0 && i % w == (w - 1) {
+            print!("\n");
+        }
+    }
 }
