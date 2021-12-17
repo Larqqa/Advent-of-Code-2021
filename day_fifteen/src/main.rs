@@ -143,6 +143,9 @@ fn stretch_grid(grid: Vec<i32>, width: usize) -> (Vec<i32>, usize) {
 
 fn main() {
     let (grid, width, _) = get_input();
+    let len = grid.len();
+    let (d, _) = dijkstra(grid.clone(), 0, len, width);
+    println!("part one: {:#?}", d.get(&(len - 1)));
 
     let (g, w) = stretch_grid(grid.clone(), width);
     println!("--dijkstra--");
@@ -150,23 +153,23 @@ fn main() {
     let (d, mut s) = dijkstra(g, 0, len, w);
     println!("part two: {:#?}", d.get(&(len - 1)));
 
-    let mut i = s.len() - 1;
-    while i > 0 {
-        // println!("{}", i);
-        let j = s[i] as usize;
-        s[i] = 0;
-        i = j;
-    }
+    // let mut i = s.len() - 1;
+    // while i > 0 {
+    //     // println!("{}", i);
+    //     let j = s[i] as usize;
+    //     s[i] = 0;
+    //     i = j;
+    // }
 
-    for i in 0..s.len() {
-        if s[i] == 0 {
-            print!("#");
-        } else {
-            print!("•");
-        }
+    // for i in 0..s.len() {
+    //     if s[i] == 0 {
+    //         print!("#");
+    //     } else {
+    //         print!("•");
+    //     }
 
-        if i != 0 && i % w == (w - 1) {
-            print!("\n");
-        }
-    }
+    //     if i != 0 && i % w == (w - 1) {
+    //         print!("\n");
+    //     }
+    // }
 }
