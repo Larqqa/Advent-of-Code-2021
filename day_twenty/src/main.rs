@@ -24,11 +24,13 @@ impl Image {
 }
 
 fn get_input() -> (Vec<char>, Image) {
-    let s = include_str!("test.txt");
-    let (a, b) = s.split_once("\n\n").unwrap();
+    let s = include_str!("input.txt");
+    // let s = include_str!("test.txt");
 
-    let algo: Vec<char> = a.replace("\n", "").chars().collect();
-    let data: Vec<Vec<char>> = b.split("\n").map(|x| x.chars().collect()).collect();
+    let (a, b) = s.split_once("\r\n\r\n").unwrap();
+
+    let algo: Vec<char> = a.replace("\r\n", "").chars().collect();
+    let data: Vec<Vec<char>> = b.split("\r\n").map(|x| x.chars().collect()).collect();
 
     let image = Image {
         width: data[0].len(),
@@ -82,28 +84,37 @@ fn run_iter(algo: &Vec<char>, image: &Image) -> Image {
 
                 identifier.push_str(line.as_str());
             }
-            let bin = get_binary(&identifier);
-            let num = get_decimal_from_binary(&bin);
-            // println!("{} {}", bin, num);
+            if identifier.contains(LIGHT)  {
+                let bin = get_binary(&identifier);
+                let num = get_decimal_from_binary(&bin);
+                // println!("{} {}", bin, num);
+                output.data.push(algo[num as usize]);
+            } else {
+                output.data.push(DARK);
+            }
 
-            output.data.push(algo[num as usize]);
         }
     }
 
-    output.print_image();
-    // println!("{:?}", output);
+    // output.print_image();
 
     output
 }
 
-fn part_one() -> i32 {
+fn part_one() -> usize {
     let (algo, image) = get_input();
+    // println!("{:?}", algo);
+    // println!("{:?}", image);
 
     image.print_image();
-    let o = run_iter(&algo, &image);
-    run_iter(&algo, &o);
+    let mut o = image;
+    // for _ in 0..2 {   
+    //     o = run_iter(&algo, &o);
+    // }
+    o = run_iter(&algo, &o);
+    o.print_image();
 
-    0
+    o.data.into_iter().filter(|x| *x == LIGHT).count()
 }
 
 // fn part_two() -> i32 {
