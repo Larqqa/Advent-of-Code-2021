@@ -10,6 +10,19 @@ struct Image {
     data: Vec<char>,
 }
 
+impl Image {
+    fn print_image(&self) {
+        print!("\n");
+        for y in 0..self.height {
+            for x in 0..self.width {
+                print!("{}", self.data[self.width * y + x]);
+            }
+            print!("\n");
+        }
+        print!("\n");
+    }
+}
+
 fn get_input() -> (Vec<char>, Image) {
     let s = include_str!("test.txt");
     let (a, b) = s.split_once("\n\n").unwrap();
@@ -26,15 +39,24 @@ fn get_input() -> (Vec<char>, Image) {
     (algo, image)
 }
 
+fn get_decimal_from_binary(str: &String) -> isize {
+    isize::from_str_radix(&str, 2).unwrap()
+
+}
+
+fn get_binary(str: &String) -> String {
+    str.chars().map(|x| if x == LIGHT {'1'} else {'0'}).collect()
+}
+
 fn run_iter(algo: &Vec<char>, image: &Image) -> Image {
     let mut output = Image {
-        width: image.width + 1,
-        height: image.height + 1,
+        width: image.width + 2,
+        height: image.height + 2,
         data: vec![],
     };
 
-    for y in 0..output.height + 1 {
-        for x in 0..output.width + 1 {
+    for y in 0..output.height {
+        for x in 0..output.width {
             let first_x = x as i32 - 1;
             let first_y = y as i32 - 1;
             let mut identifier = String::new();
@@ -60,23 +82,26 @@ fn run_iter(algo: &Vec<char>, image: &Image) -> Image {
 
                 identifier.push_str(line.as_str());
             }
-            println!("{}", identifier);
+            let bin = get_binary(&identifier);
+            let num = get_decimal_from_binary(&bin);
+            // println!("{} {}", bin, num);
 
-            output.data.push(DARK);
+            output.data.push(algo[num as usize]);
         }
     }
 
-    println!("{:?}", output);
+    output.print_image();
+    // println!("{:?}", output);
 
     output
 }
 
 fn part_one() -> i32 {
     let (algo, image) = get_input();
-    // println!("{:?}", algo);
-    // println!("{:?}", image);
 
-    run_iter(&algo, &image);
+    image.print_image();
+    let o = run_iter(&algo, &image);
+    run_iter(&algo, &o);
 
     0
 }
