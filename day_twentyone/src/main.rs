@@ -4,9 +4,10 @@ struct Player {
     id: u32,
     position: u32,
     score: u32,
+    wins: u128,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 #[allow(dead_code)]
 struct Players {
     one: Player,
@@ -40,7 +41,7 @@ impl DeterministicDice {
 #[allow(dead_code)]
 struct Game {
     board: Vec<u32>,
-    dirac: Vec<u32>,
+    dirac: Vec<(u32, u32)>,
 }
 #[allow(dead_code)]
 impl Game {
@@ -48,7 +49,13 @@ impl Game {
         Game {
             board: (1..=10).collect(),
             dirac: vec![
-                3, 4, 5, 4, 5, 6, 5, 6, 7, 4, 5, 6, 5, 6, 7, 6, 7, 8, 5, 6, 7, 6, 7, 8, 7, 8, 9,
+                (3,1),
+                (4,3),
+                (5,6),
+                (6,7),
+                (7,6),
+                (8,3),
+                (9,1),
             ],
         }
     }
@@ -69,31 +76,36 @@ impl Game {
         }
     }
 
-    fn do_dirac(&self, player: Player) -> (u32, Vec<Player>) {
-        let mut wins = 0;
-        let mut unfinished: Vec<Player> = vec![];
+    fn play_dirac(&self, players: Players, turn: bool) -> (u128, u128) {
+        if players.one.score >= 21 {
+            (1,0)
+        } else if players.two.score>= 21 {
+            (0,1)
+        } else {
+            let mut p: Player;
+            let mut ps: Players;
+            let (mut x, mut y): (u128, u128);
+            let mut a = 0;
+            let mut b = 0;
+            for roll in self.dirac.iter() {
+                p = if !turn {players.one.clone()} else {players.two.clone()};
+                p.position = (p.position + roll.0) % self.board.len() as u32;
+                p.score += self.board[p.position as usize];
 
-        for roll in self.dirac.iter() {
-            let mut p = player.clone();
-            // println!("p:{} s:{}", p.position, p.score);
-            p.position = (p.position + (roll)) % self.board.len() as u32;
-            p.score = p.score + self.board[p.position as usize];
+                ps = players.clone();
+                if !turn {ps.one = p} else {ps.two = p}
 
-            // println!("p:{} s:{}", p.position, p.score);
-            // println!("-----");
-            if p.score >= 21 {
-                wins += 1
-            } else {
-                unfinished.push(p)
+                (x,y) = self.play_dirac(ps, !turn);
+                a += x * roll.1 as u128;
+                b += y * roll.1 as u128;
             }
+            (a,b)
         }
-
-        (wins, unfinished)
     }
 }
 
 fn get_input() -> Players {
-    let s: Vec<Player> = include_str!("test.txt")
+    let s: Vec<Player> = include_str!("input.txt")
         .lines()
         .map(|x| {
             let a: Vec<&str> = x.split("starting position").collect();
@@ -101,6 +113,7 @@ fn get_input() -> Players {
                 id: a[0].replace("Player", "").trim().parse().unwrap(),
                 position: a[1].replace(":", "").trim().parse::<u32>().unwrap() - 1,
                 score: 0,
+                wins: 0
             }
         })
         .collect();
@@ -115,8 +128,6 @@ fn part_one() -> u32 {
     let mut input = get_input();
     let game = Game::gen();
     let mut dice = DeterministicDice::gen();
-
-    // println!("{:?}", input);
     let mut end = false;
     while !end {
         end = game.do_move(&mut input.one, &mut dice);
@@ -128,7 +139,6 @@ fn part_one() -> u32 {
             break;
         };
     }
-    println!("{:?} {}", input, dice.rolls);
     dice.rolls
         * if input.one.score > input.two.score {
             input.two.score
@@ -137,43 +147,15 @@ fn part_one() -> u32 {
         }
 }
 
-fn part_two() -> u32 {
+fn part_two() -> u128 {
     let players = get_input();
     let game = Game::gen();
+    let out = game.play_dirac(players,false);
 
-    let (mut w, mut p) = game.do_dirac(players.one);
-    let (mut w2, mut p2) = game.do_dirac(players.two);
-
-    loop {
-        for pl in p.clone().iter() {
-            let (v, b) = game.do_dirac(*pl);
-            w += v;
-            p = b;
-        }
-        if p.len() == 0 {
-            break;
-        }
-
-        for pl in p2.clone().iter() {
-            let (v, b) = game.do_dirac(*pl);
-            w2 += v;
-            p2 = b;
-        }
-        if p2.len() == 0 {
-            break;
-        }
-
-        println!("p1: w: {} l: {}", w, p.len());
-        println!("p2: w: {} l: {}", w2, p2.len());
-        println!("------")
-    }
-
-    println!("p1: {}, p2: {}", w, w2);
-
-    0
+    out.0.max(out.1)
 }
 
 fn main() {
-    // println!("part one: {}", part_one());
+    println!("part one: {}", part_one());
     println!("part two: {}", part_two());
 }
