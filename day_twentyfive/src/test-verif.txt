@@ -1,0 +1,21 @@
+Initial state:
+v...>>.vv>
+.vv>>.vv..
+>>.>v>...v
+>>v>>.>.v.
+v>v.vv.v..
+>.>>..v...
+.vv..>.>v.
+v.v..>>v.v
+....v..v.>
+
+After 1 step:
+....>.>v.>
+v.v>.>v.v.
+>v>>..>v..
+>>v>v>.>.v
+.>v.v...v.
+v>>.>vvv..
+..v...>>..
+vv...>>vv.
+>.v.v..v.v
